@@ -1,0 +1,208 @@
+<!DOCTYPE aesl-source>
+<network>
+<event size="1" name="pair_run"/>
+<event size="14" name="debug_log"/>
+<node nodeId="{70f12751-e171-42c6-bcf2-542a1e61adc3}" name="Tim auf Livio-GLaptop - 11952"># variables for state
+var state[4] = [0,0,0,0]
+var new_state[4] = [0,0,0,0]
+
+# stop timer 0
+timer.period[0] = 0
+# reset outputs
+call sound.system(-1)
+call leds.top(0,0,0)
+call leds.bottom.left(0,0,0)
+call leds.bottom.right(0,0,0)
+call leds.circle(0,0,0,0,0,0,0,0)
+
+# subroutine to display the current state
+sub display_state
+	call leds.circle(0,state[1]*32,0,state[3]*32,0,state[2]*32,0,state[0]*32)
+
+onevent buttons
+	when button.center == 1 do
+		motor.left.target = 350
+		motor.right.target = 350
+		new_state[0] = 0
+		new_state[1] = 0
+		new_state[2] = 0
+		new_state[3] = 0
+		call leds.top(32,0,0)
+		emit pair_run 0
+		_emit debug_log [0, 0x5, 0xd871, 0x90, 0, 0x1, 0, 0x1111, 0x50, 0x8820]
+	end
+
+	when button.backward == 1 do
+		motor.left.target = 0
+		motor.right.target = 0
+		new_state[0] = 0
+		new_state[1] = 0
+		new_state[2] = 0
+		new_state[3] = 0
+		call leds.top(0,32,0)
+		emit pair_run 4
+		_emit debug_log [0x4, 0x5, 0xd871, 0x90, 0, 0x4, 0, 0xa0a, 0x50, 0x420]
+	end
+
+	call math.copy(state, new_state)
+	callsub display_state
+
+
+onevent prox
+	when prox.ground.delta[0] &lt;= 225 and prox.ground.delta[1] >= 475 do
+		motor.left.target = 350
+		motor.right.target = -200
+		new_state[0] = 0
+		new_state[1] = 0
+		new_state[3] = 0
+		call leds.top(32,0,0)
+		emit pair_run 1
+		_emit debug_log [0x1, 0x5, 0xd873, 0x90, 0x9, 0xe1, 0x1db, 0, 0x1106, 0x4a, 0x8820]
+	end
+
+	when prox.ground.delta[0] >= 450 and prox.ground.delta[1] &lt;= 250 do
+		motor.left.target = -200
+		motor.right.target = 350
+		new_state[0] = 0
+		new_state[1] = 0
+		new_state[3] = 0
+		call leds.top(32,0,12)
+		emit pair_run 2
+		_emit debug_log [0x2, 0x5, 0xd873, 0x90, 0x6, 0xfa, 0x1c2, 0, 0x611, 0x4a, 0x882c]
+	end
+
+	when prox.ground.delta[0] >= 450 and prox.ground.delta[1] >= 450 do
+		if state[1] == 0 and state[3] == 0 then
+			motor.left.target = 350
+			motor.right.target = 350
+			call leds.top(32,0,0)
+			emit pair_run 3
+			_emit debug_log [0x3, 0x4, 0x9873, 0x5, 0x113, 0x1c2, 0x14, 0x1111, 0x8820]
+		end
+	end
+
+	when prox.ground.delta[0] &lt;= 375 and prox.ground.delta[1] &lt;= 375 do
+		motor.left.target = -350
+		motor.right.target = -350
+		new_state[1] = 1
+		new_state[3] = 0
+		timer.period[0] = 500
+		emit pair_run 5
+		_emit debug_log [0x5, 0x5, 0xd873, 0xc0, 0xa, 0x177, 0x352, 0, 0x303, 0xb, 0x1f4]
+	end
+
+	call math.copy(state, new_state)
+	callsub display_state
+
+
+onevent timer0
+	timer.period[0] = 0
+	if state[0] == 0 and state[1] == 1 and state[2] == 0 and state[3] == 0 then
+		motor.left.target = 350
+		motor.right.target = -200
+		new_state[0] = 0
+		new_state[1] = 0
+		new_state[2] = 1
+		new_state[3] = 1
+		timer.period[0] = 500
+		emit pair_run 6
+		_emit debug_log [0x6, 0x5, 0xd876, 0xc0, 0x47, 0x1106, 0x4c, 0x1f4]
+	end
+
+	if state[0] == 0 and state[1] == 1 and state[2] == 1 and state[3] == 0 then
+		motor.left.target = -200
+		motor.right.target = 350
+		new_state[0] = 0
+		new_state[1] = 0
+		new_state[2] = 0
+		new_state[3] = 1
+		timer.period[0] = 500
+		emit pair_run 7
+		_emit debug_log [0x7, 0x5, 0xd876, 0xc0, 0x44, 0x611, 0x4f, 0x1f4]
+	end
+
+	if state[3] == 1 then
+		motor.left.target = 350
+		motor.right.target = 350
+		new_state[3] = 0
+		emit pair_run 8
+		_emit debug_log [0x8, 0x4, 0xd876, 0x1, 0x1111, 0x2]
+	end
+
+	call math.copy(state, new_state)
+	callsub display_state
+
+<toolsPlugins>
+<ThymioVisualProgramming>
+<vplroot xml-format-version="1">
+<program advanced_mode="1">
+<set>
+<block value3="0" value1="0" value4="1" value6="0" value5="0" name="button" value2="0" type="event" value0="0"/>
+<block value3="0" value1="0" name="statefilter" value2="0" type="state" value0="0"/>
+<block value1="350" name="move" type="action" value0="350"/>
+<block value3="2" value1="2" name="setstate" value2="2" type="action" value0="2"/>
+<block value1="0" name="colortop" value2="0" type="action" value0="32"/>
+</set>
+<set>
+<block value3="475" value1="1" name="proxground" value2="225" type="event" value0="2"/>
+<block value3="0" value1="0" name="statefilter" value2="0" type="state" value0="0"/>
+<block value1="-200" name="move" type="action" value0="350"/>
+<block value3="2" value1="2" name="setstate" value2="0" type="action" value0="2"/>
+<block value1="0" name="colortop" value2="0" type="action" value0="32"/>
+</set>
+<set>
+<block value3="450" value1="2" name="proxground" value2="250" type="event" value0="1"/>
+<block value3="0" value1="0" name="statefilter" value2="0" type="state" value0="0"/>
+<block value1="350" name="move" type="action" value0="-200"/>
+<block value3="2" value1="2" name="setstate" value2="0" type="action" value0="2"/>
+<block value1="0" name="colortop" value2="12" type="action" value0="32"/>
+</set>
+<set>
+<block value3="450" value1="1" name="proxground" value2="275" type="event" value0="1"/>
+<block value3="2" value1="2" name="statefilter" value2="0" type="state" value0="0"/>
+<block value1="350" name="move" type="action" value0="350"/>
+<block value1="0" name="colortop" value2="0" type="action" value0="32"/>
+</set>
+<set>
+<block value3="0" value1="0" value4="0" value6="0" value5="0" name="button" value2="1" type="event" value0="0"/>
+<block value3="0" value1="0" name="statefilter" value2="0" type="state" value0="0"/>
+<block value1="0" name="move" type="action" value0="0"/>
+<block value3="2" value1="2" name="setstate" value2="2" type="action" value0="2"/>
+<block value1="32" name="colortop" value2="0" type="action" value0="0"/>
+</set>
+<set>
+<block value3="850" value1="2" name="proxground" value2="375" type="event" value0="2"/>
+<block value3="0" value1="0" name="statefilter" value2="0" type="state" value0="0"/>
+<block value1="-350" name="move" type="action" value0="-350"/>
+<block value3="2" value1="1" name="setstate" value2="0" type="action" value0="0"/>
+<block name="timer" type="action" value0="500"/>
+</set>
+<set>
+<block name="timeout" type="event"/>
+<block value3="2" value1="1" name="statefilter" value2="2" type="state" value0="2"/>
+<block value1="-200" name="move" type="action" value0="350"/>
+<block value3="1" value1="2" name="setstate" value2="1" type="action" value0="2"/>
+<block name="timer" type="action" value0="500"/>
+</set>
+<set>
+<block name="timeout" type="event"/>
+<block value3="2" value1="1" name="statefilter" value2="1" type="state" value0="2"/>
+<block value1="350" name="move" type="action" value0="-200"/>
+<block value3="1" value1="2" name="setstate" value2="2" type="action" value0="2"/>
+<block name="timer" type="action" value0="500"/>
+</set>
+<set>
+<block name="timeout" type="event"/>
+<block value3="1" value1="0" name="statefilter" value2="0" type="state" value0="0"/>
+<block value1="350" name="move" type="action" value0="350"/>
+<block value3="2" value1="0" name="setstate" value2="0" type="action" value0="0"/>
+</set>
+<set>
+<block value3="0" value1="0" name="statefilter" value2="0" type="state" value0="0"/>
+</set>
+</program>
+</vplroot>
+</ThymioVisualProgramming>
+</toolsPlugins>
+</node>
+</network>
